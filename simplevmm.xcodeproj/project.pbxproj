@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		63EA3B1729A15142004A3640 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63EA3B1629A15142004A3640 /* main.swift */; };
+		63EA3B3F29A29613004A3640 /* UART.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63EA3B3E29A29613004A3640 /* UART.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -28,6 +29,7 @@
 		63EA3B1D29A1515B004A3640 /* simplevmm.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = simplevmm.entitlements; sourceTree = "<group>"; };
 		63EA3B2F29A16CCF004A3640 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		63EA3B3029A16ED0004A3640 /* bootcode.s */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.asm; path = bootcode.s; sourceTree = "<group>"; };
+		63EA3B3E29A29613004A3640 /* UART.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UART.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -62,6 +64,7 @@
 			isa = PBXGroup;
 			children = (
 				63EA3B1629A15142004A3640 /* main.swift */,
+				63EA3B3E29A29613004A3640 /* UART.swift */,
 				63EA3B1D29A1515B004A3640 /* simplevmm.entitlements */,
 			);
 			path = simplevmm;
@@ -156,6 +159,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				63EA3B1729A15142004A3640 /* main.swift in Sources */,
+				63EA3B3F29A29613004A3640 /* UART.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

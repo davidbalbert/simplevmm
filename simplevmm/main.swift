@@ -34,9 +34,37 @@ extension hv_return_t {
 }
 
 var bootcode: [UInt8] = [
-    0x40, 0x00, 0x80, 0xd2, // mov x0, #2
-    0x00, 0x08, 0x00, 0x91, // add x0, x0, #2
-    0xc2, 0x5f, 0x19, 0xd4  // hvc #0xcafe
+    0x00, 0x00, 0x88, 0xd2,      // mov    x0, #0x4000 // uart address
+    0x01, 0x09, 0x80, 0xd2,      // mov    w1, 'h'
+    0x01, 0x00, 0x00, 0x39,      // strb   x1, [x0]
+    0xa1, 0x0c, 0x80, 0xd2,      // mov    w1, 'e'
+    0x01, 0x00, 0x00, 0x39,      // strb   x1, [x0]
+    0x81, 0x0d, 0x80, 0xd2,      // mov    w1, 'l'
+    0x01, 0x00, 0x00, 0x39,      // strb   x1, [x0]
+    0x81, 0x0d, 0x80, 0xd2,      // mov    w1, 'l'
+    0x01, 0x00, 0x00, 0x39,      // strb   x1, [x0]
+    0xe1, 0x0d, 0x80, 0xd2,      // mov    w1, 'o'
+    0x01, 0x00, 0x00, 0x39,      // strb   x1, [x0]
+    0x01, 0x04, 0x80, 0xd2,      // mov    w1, ' '
+    0x01, 0x00, 0x00, 0x39,      // strb   x1, [x0]
+    0xe1, 0x0e, 0x80, 0xd2,      // mov    w1, 'w'
+    0x01, 0x00, 0x00, 0x39,      // strb   x1, [x0]
+    0xe1, 0x0d, 0x80, 0xd2,      // mov    w1, 'o'
+    0x01, 0x00, 0x00, 0x39,      // strb   x1, [x0]
+    0x41, 0x0e, 0x80, 0xd2,      // mov    w1, 'r'
+    0x01, 0x00, 0x00, 0x39,      // strb   x1, [x0]
+    0x81, 0x0d, 0x80, 0xd2,      // mov    w1, 'l'
+    0x01, 0x00, 0x00, 0x39,      // strb   x1, [x0]
+    0x81, 0x0c, 0x80, 0xd2,      // mov    w1, 'd'
+    0x01, 0x00, 0x00, 0x39,      // strb   x1, [x0]
+    0x21, 0x04, 0x80, 0xd2,      // mov    w1, '!'
+    0x01, 0x00, 0x00, 0x39,      // strb   x1, [x0]
+    0x41, 0x01, 0x80, 0xd2,      // mov    w1, '\n'
+    0x01, 0x00, 0x00, 0x39,      // strb   x1, [x0]
+
+    0x40, 0x00, 0x80, 0xd2,      // mov    x0, #2
+    0x00, 0x08, 0x00, 0x91,      // add    x0, x0, #2
+    0xc2, 0x5f, 0x19, 0xd4       // hvc    #0xcafe
 ]
 
 func panic(_ s: String) -> Never {
@@ -53,6 +81,8 @@ func hv_assert(_ s: String, _ ret: hv_return_t) {
 func vcpu_main() {
     var vcpu: hv_vcpu_t = 0
     var vexit: UnsafeMutablePointer<hv_vcpu_exit_t>? = nil
+
+    var uart = UART(outputStream: FileHandle.standardOutput)
 
     hv_assert("hv_vcpu_create", hv_vcpu_create(&vcpu, &vexit, nil))
     hv_assert("hv_vcpu_set_reg HV_REG_PC", hv_vcpu_set_reg(vcpu, HV_REG_PC, 0))
@@ -74,20 +104,71 @@ func vcpu_main() {
         hv_assert("hv_vcpu_run", hv_vcpu_run(vcpu))
 
         if vexit.pointee.reason == HV_EXIT_REASON_EXCEPTION {
-            let exceptionClass = (vexit.pointee.exception.syndrome >> 26) & 0x3f
+            let esr_el2 = vexit.pointee.exception.syndrome
 
-            if exceptionClass == 0x16 { // HVC in AArch64
-                let arg = vexit.pointee.exception.syndrome & 0xffff
+            let exceptionClass = (esr_el2 >> 26) & 0x3f
+
+            if exceptionClass == 0x16 {
+                // HVC in AArch64
+                let arg = esr_el2 & 0xffff
                 var x0: UInt64 = 0
                 hv_assert("read reg", hv_vcpu_get_reg(vcpu, HV_REG_X0, &x0))
 
                 print(String(format: "hvc #0x%x", arg))
                 print("x0 = \(x0)")
+                break
+            } else if exceptionClass == 0x24 {
+                // Data Abort exception from a lower EL taken to EL2
+                let dfsc = esr_el2 & 0x3f
+
+                if dfsc & (1<<2) != 0 {
+                    // Translation fault
+                    let isv = (esr_el2 >> 24) & 1
+
+                    if isv != 1 {
+                        panic("isv must be set")
+                    }
+
+                    let lst = (esr_el2 >> 11) & 3
+
+                    if lst != 0 {
+                        panic("ST64BV/LD64B/ST64B/ST64BV0 data abort not implemented")
+                    }
+
+                    let cm = (esr_el2 >> 8) & 1
+
+                    if cm == 1 {
+                        panic("cache maintenance data abort not implemented")
+                    }
+
+                    let ipa = vexit.pointee.exception.physical_address
+                    let write = esr_el2 & (1<<6) != 0
+                    let srt = (esr_el2 >> 16) & 0x1f
+
+                    if ipa != 0x4000 {
+                        panic(String(format: "read or write to address 0x%x not implemented", ipa))
+                    }
+
+                    if write {
+                        let reg = hv_reg_t(UInt32(srt))
+                        var value: UInt64 = 0
+                        hv_assert("hv_vcpu_get_reg", hv_vcpu_get_reg(vcpu, reg, &value))
+
+                        uart.tx = UInt8(value)
+                    } else {
+                        panic("read not implemented")
+                    }
+                } else {
+                    panic("data abort: \(String(format: "ESR_EL2=0x%x IPA=0x%x FAR_EL2=0x%x", vexit.pointee.exception.syndrome, vexit.pointee.exception.physical_address, vexit.pointee.exception.virtual_address))")
+                }
+
+                var pc: UInt64 = 0
+                hv_assert("get pc", hv_vcpu_get_reg(vcpu, HV_REG_PC, &pc))
+                pc += 4
+                hv_assert("set pc", hv_vcpu_set_reg(vcpu, HV_REG_PC, pc))
             } else {
                 panic("unknown exception class \(exceptionClass)")
             }
-
-            break
         } else {
             panic("unknown exit reason \(vexit.pointee.reason)")
         }
