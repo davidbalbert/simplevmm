@@ -115,7 +115,5 @@ hv_assert("hv_vm_map", hv_vm_map(mem, 0, memsz, hv_memory_flags_t(HV_MEMORY_READ
 vcpu_main()
 
 hv_assert("hv_vm_unmap", hv_vm_unmap(0, memsz))
-
 hv_assert("hv_vm_deallocate", hv_vm_deallocate(mem, memsz))
-
 hv_assert("hv_vm_destroy", hv_vm_destroy())
