@@ -33,18 +33,6 @@ extension hv_return_t {
     }
 }
 
-//extension hv_exit_reason_t {
-//    public var description: String {
-//        switch self {
-//        case HV_EXIT_REASON_CANCELED: return "HV_EXIT_REASON_CANCELED"
-//        case HV_EXIT_REASON_EXCEPTION: return "HV_EXIT_REASON_EXCEPTION"
-//        case HV_EXIT_REASON_VTIMER_ACTIVATED: return "HV_EXIT_REASON_VTIMER_ACTIVATED"
-//        case HV_EXIT_REASON_UNKNOWN: return "HV_EXIT_REASON_UNKNOWN"
-//        default: return "(hv_exit_reason_t 0x\(String(self, radix: 16)))"
-//        }
-//    }
-//}
-
 var bootcode: [UInt8] = [
     0x40, 0x00, 0x80, 0xd2, // mov x0, #2
     0x00, 0x08, 0x00, 0x91, // add x0, x0, #2
